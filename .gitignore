@@ -1,0 +1,11 @@
+.env
+!.env.example
+
+**/node_modules/
+**/dist/
+**/target/
+**/.idea/
+*.iml
+*.log
+
+redes-database/04-create-app-login.local.sql

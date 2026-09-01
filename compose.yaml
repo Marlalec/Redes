@@ -1,0 +1,77 @@
+name: osi-dev-explorer
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2025-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD:?Ejecuta iniciar-docker.cmd para generar la configuracion local}"
+    ports:
+      - "${SQLSERVER_PORT:-14330}:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          SQLCMD=/opt/mssql-tools18/bin/sqlcmd;
+          if [ ! -x "$$SQLCMD" ]; then SQLCMD=/opt/mssql-tools/bin/sqlcmd; fi;
+          SQLCMDPASSWORD="$$MSSQL_SA_PASSWORD" "$$SQLCMD"
+          -S localhost -U sa -C -b -Q "SELECT 1" -o /dev/null
+      interval: 10s
+      timeout: 5s
+      retries: 24
+      start_period: 40s
+    restart: unless-stopped
+
+  db-init:
+    image: mcr.microsoft.com/mssql/server:2025-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD:?Ejecuta iniciar-docker.cmd para generar la configuracion local}"
+      DB_PASSWORD: "${DB_PASSWORD:?Ejecuta iniciar-docker.cmd para generar la configuracion local}"
+      DB_HOST: sqlserver
+    entrypoint: ["/bin/bash", "/docker-init/init-db.sh"]
+    volumes:
+      - ./docker/sqlserver/init-db.sh:/docker-init/init-db.sh:ro
+      - ./docker/sqlserver/04-create-app-login.docker.sql:/docker-init/04-create-app-login.docker.sql:ro
+      - ./redes-database:/database:ro
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    restart: "no"
+
+  backend:
+    build:
+      context: ./redes-backend
+      dockerfile: Dockerfile
+    environment:
+      SERVER_ADDRESS: 0.0.0.0
+      SERVER_PORT: 8080
+      DB_URL: "jdbc:sqlserver://sqlserver:1433;databaseName=RedesDB;encrypt=true;trustServerCertificate=true;applicationName=OSI-Dev-Explorer-Docker"
+      DB_USERNAME: redes_app
+      DB_PASSWORD: "${DB_PASSWORD:?Ejecuta iniciar-docker.cmd para generar la configuracion local}"
+      CORS_ALLOWED_ORIGINS: "http://localhost:${FRONTEND_PORT:-5173},http://127.0.0.1:${FRONTEND_PORT:-5173}"
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75.0 -Dfile.encoding=UTF-8"
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./redes-frontend
+      dockerfile: Dockerfile
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  sqlserver-data:
+    name: osi-dev-explorer-sqlserver-data

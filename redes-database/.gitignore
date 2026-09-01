@@ -1,0 +1,13 @@
+# Archivos locales de SQL Server
+*.bak
+*.mdf
+*.ldf
+*.log
+
+# Copia local que puede contener la clave del usuario de aplicacion
+04-create-app-login.local.sql
+
+# Variables y configuraciones locales
+.env
+*.user
+

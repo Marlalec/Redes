@@ -1,0 +1,9 @@
+target/
+.idea/
+.vscode/
+*.iml
+*.log
+application-local.properties
+application-production.properties
+.env
+hs_err_pid*
