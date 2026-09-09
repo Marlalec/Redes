@@ -18,7 +18,8 @@ SELECT
     DB_NAME() AS database_name,
     (SELECT COUNT(*) FROM dbo.OSI_LAYER) AS osi_layer_count,
     (SELECT COUNT(*) FROM dbo.PROTOCOL) AS protocol_count,
-    (SELECT COUNT(*) FROM dbo.NETWORK_PORT) AS network_port_count;
+    (SELECT COUNT(*) FROM dbo.NETWORK_PORT) AS network_port_count,
+    (SELECT COUNT(*) FROM dbo.APP_USER) AS application_user_count;
 
 -- 2. Las siete capas en el orden visual utilizado por el frontend.
 SELECT
@@ -181,10 +182,24 @@ IF
           (
               OBJECT_ID(N'dbo.OSI_LAYER'),
               OBJECT_ID(N'dbo.PROTOCOL'),
-              OBJECT_ID(N'dbo.NETWORK_PORT')
+              OBJECT_ID(N'dbo.NETWORK_PORT'),
+              OBJECT_ID(N'dbo.APP_USER')
           )
-) <> 3
-    THROW 51029, N'Validación fallida: redes_app no tiene SELECT sobre las tres tablas requeridas.', 1;
+) <> 4
+    THROW 51029, N'Validación fallida: redes_app no tiene SELECT sobre las cuatro tablas requeridas.', 1;
+
+IF
+(
+    SELECT COUNT(*)
+    FROM sys.database_permissions AS database_permission
+    INNER JOIN sys.database_principals AS database_principal
+        ON database_principal.principal_id = database_permission.grantee_principal_id
+    WHERE database_principal.name = N'redes_app'
+      AND database_permission.state IN ('G', 'W')
+      AND database_permission.permission_name IN (N'INSERT', N'UPDATE')
+      AND database_permission.major_id = OBJECT_ID(N'dbo.APP_USER')
+) <> 2
+    THROW 51030, N'Validación fallida: redes_app no puede crear o actualizar usuarios de la aplicación.', 1;
 
 IF EXISTS
 (
@@ -194,10 +209,17 @@ IF EXISTS
         ON database_principal.principal_id = database_permission.grantee_principal_id
     WHERE database_principal.name = N'redes_app'
       AND database_permission.state IN ('G', 'W')
-      AND database_permission.permission_name IN
-          (N'INSERT', N'UPDATE', N'DELETE', N'ALTER', N'CONTROL')
+      AND
+      (
+          database_permission.permission_name IN (N'DELETE', N'ALTER', N'CONTROL')
+          OR
+          (
+              database_permission.permission_name IN (N'INSERT', N'UPDATE')
+              AND database_permission.major_id <> OBJECT_ID(N'dbo.APP_USER')
+          )
+      )
 )
-    THROW 51030, N'Validación fallida: redes_app tiene permisos de escritura o administración no permitidos.', 1;
+    THROW 51031, N'Validación fallida: redes_app tiene permisos fuera del mínimo requerido.', 1;
 
 SELECT
     N'OK' AS validation_status,

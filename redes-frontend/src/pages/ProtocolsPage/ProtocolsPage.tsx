@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { EmptyState, ErrorState, LoadingState } from "../../components/Feedback/Feedback";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { ProtocolCard } from "../../components/ProtocolCard/ProtocolCard";
@@ -24,25 +24,38 @@ async function loadProtocolPageData(signal: AbortSignal): Promise<ProtocolPageDa
   return { protocols, ports };
 }
 
+function getProtocolColumnCount(): number {
+  if (typeof window === "undefined") return 5;
+  if (window.innerWidth <= 650) return 1;
+  if (window.innerWidth <= 860) return 3;
+  if (window.innerWidth <= 1200) return 4;
+  return 5;
+}
+
 export function ProtocolsPage() {
   const { data, isLoading, error, reload } = useApiResource(loadProtocolPageData);
   const [query, setQuery] = useState("");
   const [selectedProtocolId, setSelectedProtocolId] = useState<number | null>(null);
+  const [columnCount, setColumnCount] = useState(getProtocolColumnCount);
   const normalizedQuery = normalizeText(query.trim());
 
-  const filteredProtocols = data?.protocols.filter((protocol) => {
-    const searchableText = normalizeText(
-      `${protocol.name} ${protocol.description} ${protocol.transportType} ${protocol.osiLayer.name}`,
-    );
-    return searchableText.includes(normalizedQuery);
-  }) ?? [];
+  useEffect(() => {
+    const updateColumnCount = () => setColumnCount(getProtocolColumnCount());
+    window.addEventListener("resize", updateColumnCount);
+    return () => window.removeEventListener("resize", updateColumnCount);
+  }, []);
+
+  const filteredProtocols = data?.protocols.filter((protocol) =>
+    normalizeText(protocol.name).includes(normalizedQuery),
+  ) ?? [];
 
   const selectedProtocol =
-    filteredProtocols.find((protocol) => protocol.id === selectedProtocolId) ?? filteredProtocols[0];
+    filteredProtocols.find((protocol) => protocol.id === selectedProtocolId) ?? null;
 
-  const relatedPorts = selectedProtocol
-    ? data?.ports.filter((port) => port.protocol.id === selectedProtocol.id) ?? []
-    : [];
+  const protocolRows: NetworkProtocol[][] = [];
+  for (let index = 0; index < filteredProtocols.length; index += columnCount) {
+    protocolRows.push(filteredProtocols.slice(index, index + columnCount));
+  }
 
   return (
     <div className="page-container page-section">
@@ -69,65 +82,93 @@ export function ProtocolsPage() {
       {error ? <ErrorState message={error} onRetry={reload} /> : null}
 
       {!isLoading && !error && filteredProtocols.length ? (
-        <div className="catalog-layout">
-          <section className="protocol-grid" aria-label="Listado de protocolos">
-            {filteredProtocols.map((protocol) => (
-              <ProtocolCard
-                key={protocol.id}
-                protocol={protocol}
-                isSelected={selectedProtocol?.id === protocol.id}
-                onSelect={(item) => setSelectedProtocolId(item.id)}
-              />
-            ))}
-          </section>
+        <div className="protocol-rows" aria-label="Listado de protocolos">
+          {protocolRows.map((row) => {
+            const expandedProtocol = row.find(
+              (protocol) => protocol.id === selectedProtocol?.id,
+            );
+            const selectedColumn = expandedProtocol
+              ? row.findIndex((protocol) => protocol.id === expandedProtocol.id)
+              : -1;
+            const relatedPorts = expandedProtocol
+              ? data?.ports.filter((port) => port.protocol.id === expandedProtocol.id) ?? []
+              : [];
+            const detailStyle = expandedProtocol
+              ? ({
+                  "--detail-pointer-left": `${((selectedColumn + 0.5) / columnCount) * 100}%`,
+                } as CSSProperties)
+              : undefined;
 
-          {selectedProtocol ? (
-            <article className="detail-panel catalog-detail">
-              <div className="catalog-detail__heading">
-                <span className="catalog-detail__monogram" aria-hidden="true">
-                  {selectedProtocol.name.slice(0, 2).toUpperCase()}
-                </span>
-                <div>
-                  <span className="eyebrow">Protocolo</span>
-                  <h2>{selectedProtocol.name}</h2>
+            return (
+              <section className="protocol-row" key={row.map((protocol) => protocol.id).join("-")}>
+                <div className="protocol-grid">
+                  {row.map((protocol) => {
+                    const isSelected = selectedProtocol?.id === protocol.id;
+
+                    return (
+                      <ProtocolCard
+                        key={protocol.id}
+                        protocol={protocol}
+                        isSelected={isSelected}
+                        onSelect={(item) => setSelectedProtocolId((current) =>
+                          current === item.id ? null : item.id
+                        )}
+                      />
+                    );
+                  })}
                 </div>
-              </div>
 
-              <dl className="fact-grid">
-                <div><dt>Capa OSI</dt><dd>{selectedProtocol.osiLayer.number} · {selectedProtocol.osiLayer.name}</dd></div>
-                <div><dt>Transporte</dt><dd>{selectedProtocol.transportType}</dd></div>
-              </dl>
+                {expandedProtocol ? (
+                  <article className="protocol-row-detail" style={detailStyle}>
+                    <div className="protocol-row-detail__heading">
+                      <span className="protocol-row-detail__monogram" aria-hidden="true">
+                        {expandedProtocol.name.slice(0, 2).toUpperCase()}
+                      </span>
+                      <div>
+                        <span className="eyebrow">Protocolo seleccionado</span>
+                        <h2>{expandedProtocol.name}</h2>
+                      </div>
 
-              <div className="detail-section">
-                <span className="detail-label">Descripción</span>
-                <p>{selectedProtocol.description}</p>
-              </div>
+                      <dl className="fact-grid protocol-row-detail__facts">
+                        <div><dt>Capa OSI</dt><dd>{expandedProtocol.osiLayer.number} · {expandedProtocol.osiLayer.name}</dd></div>
+                        <div><dt>Transporte</dt><dd>{expandedProtocol.transportType}</dd></div>
+                      </dl>
+                    </div>
 
-              <div className="detail-section">
-                <span className="detail-label">Puertos relacionados</span>
-                <div className="chip-list">
-                  {relatedPorts.length ? relatedPorts.map((port) => (
-                    <span key={port.id} className="data-chip">{port.port} · {port.service}</span>
-                  )) : <span className="muted-text">No utiliza un puerto único en los datos del proyecto.</span>}
-                </div>
-              </div>
+                    <div className="protocol-row-detail__content">
+                      <div className="detail-section protocol-row-detail__section">
+                        <span className="detail-label">Descripción</span>
+                        <p>{expandedProtocol.description}</p>
+                      </div>
 
-              <div className="development-example">
-                <span className="development-example__icon" aria-hidden="true">&lt;/&gt;</span>
-                <div>
-                  <span className="detail-label">Ejemplo en desarrollo</span>
-                  <p>{selectedProtocol.developmentExample}</p>
-                </div>
-              </div>
-            </article>
-          ) : null}
+                      <div className="detail-section protocol-row-detail__section">
+                        <span className="detail-label">Puertos relacionados</span>
+                        <div className="chip-list">
+                          {relatedPorts.length ? relatedPorts.map((port) => (
+                            <span key={port.id} className="data-chip">{port.port} · {port.service}</span>
+                          )) : <span className="muted-text">No utiliza un puerto único en los datos del proyecto.</span>}
+                        </div>
+                      </div>
+
+                      <div className="development-example">
+                        <span className="development-example__icon" aria-hidden="true">&lt;/&gt;</span>
+                        <div>
+                          <span className="detail-label">Ejemplo en desarrollo</span>
+                          <p>{expandedProtocol.developmentExample}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                ) : null}
+              </section>
+            );
+          })}
         </div>
       ) : null}
 
       {!isLoading && !error && !filteredProtocols.length ? (
-        <EmptyState title="Sin coincidencias" description="Prueba con otro nombre, transporte o capa OSI." />
+        <EmptyState title="Sin coincidencias" description="Prueba con otro nombre de protocolo." />
       ) : null}
     </div>
   );
 }
-

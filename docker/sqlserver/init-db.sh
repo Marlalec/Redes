@@ -61,7 +61,7 @@ run_script /database/01-create-database.sql
 run_script /database/02-create-tables.sql
 run_script /database/03-insert-initial-data.sql
 
-echo "Creando o actualizando el login de solo lectura redes_app..."
+echo "Creando o actualizando el login técnico redes_app con permisos mínimos..."
 run_as_sa \
     -v "AppPassword=$DB_PASSWORD" \
     -i /docker-init/04-create-app-login.docker.sql

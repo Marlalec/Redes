@@ -33,6 +33,7 @@ com.universidad.redes
     ├── adapter
     │   ├── in/rest
     │   └── out/persistence
+    ├── security
     └── configuration
 ```
 
@@ -47,6 +48,7 @@ com.universidad.redes
 | `adapter/in/rest` | HTTP, validación de entrada y DTOs JSON | Puertos de entrada |
 | `adapter/out/persistence` | JPA, entidades y mapeo SQL Server | Puertos de salida |
 | `configuration` | Ensamblaje de dependencias y CORS | Spring e interfaces |
+| `security` | Carga de usuarios, BCrypt e inicialización del administrador | Spring Security y puerto de usuarios |
 
 ## Flujo de una consulta
 
@@ -73,4 +75,8 @@ Para `GET /api/ports/443`:
 - `DevelopmentFlowService` no necesita una tabla: describe la arquitectura
   estable de la propia aplicación mediante un caso de uso.
 - El pool JDBC está limitado a cinco conexiones porque el alcance académico es
-  pequeño y de solo lectura.
+  pequeño.
+- `AppUserRepositoryPort` mantiene el usuario separado del adaptador JPA; las
+  credenciales web nunca se utilizan como credenciales de SQL Server.
+- Spring Security persiste la autenticación en sesión, protege los `POST` con
+  CSRF y exige autenticación para todas las consultas educativas.

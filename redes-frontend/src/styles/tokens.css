@@ -1,36 +1,35 @@
 :root {
   font-family: "Segoe UI", Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  color: #15213a;
-  background: #f4f7fb;
+  color: #213653;
+  background: #f7fbff;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 
-  --navy-950: #091528;
-  --navy-900: #10213d;
-  --navy-800: #183154;
-  --blue-600: #405bd9;
-  --blue-500: #5571f5;
-  --teal-600: #149b8c;
-  --teal-500: #24b9a8;
-  --violet-500: #7c5ce5;
-  --amber-500: #ec9d27;
-  --rose-500: #e65d79;
-  --ink-900: #15213a;
-  --ink-700: #3c4961;
-  --ink-500: #68758c;
-  --line: #dfe6f0;
+  --navy-950: #173153;
+  --navy-900: #234a76;
+  --navy-800: #32638f;
+  --blue-600: #3978d4;
+  --blue-500: #5b92e5;
+  --teal-600: #168f87;
+  --teal-500: #39bdb0;
+  --violet-500: #8a76df;
+  --amber-500: #e8a33c;
+  --rose-500: #df7188;
+  --ink-900: #213653;
+  --ink-700: #445b78;
+  --ink-500: #6c7f99;
+  --line: #dbe8f1;
   --surface: #ffffff;
-  --surface-soft: #f7f9fc;
-  --success: #119c7f;
+  --surface-soft: #f3f8fc;
+  --success: #178d78;
   --danger: #c8425b;
 
   --radius-sm: 10px;
   --radius-md: 16px;
   --radius-lg: 24px;
   --radius-xl: 32px;
-  --shadow-sm: 0 8px 24px rgba(20, 36, 65, 0.07);
-  --shadow-md: 0 18px 50px rgba(20, 36, 65, 0.12);
-  --shadow-lg: 0 28px 80px rgba(5, 16, 36, 0.24);
+  --shadow-sm: 0 8px 24px rgba(60, 96, 130, 0.08);
+  --shadow-md: 0 18px 50px rgba(60, 96, 130, 0.13);
+  --shadow-lg: 0 28px 80px rgba(60, 96, 130, 0.18);
   --page-width: 1180px;
 }
-

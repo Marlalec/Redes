@@ -58,7 +58,8 @@ GRANT CONNECT TO [redes_app];
 GRANT SELECT ON dbo.OSI_LAYER TO [redes_app];
 GRANT SELECT ON dbo.PROTOCOL TO [redes_app];
 GRANT SELECT ON dbo.NETWORK_PORT TO [redes_app];
+GRANT SELECT, INSERT, UPDATE ON dbo.APP_USER TO [redes_app];
 GO
 
-PRINT N'Permisos de solo lectura asignados a redes_app.';
+PRINT N'Permisos mínimos asignados a redes_app: lectura educativa y gestión de usuarios.';
 GO

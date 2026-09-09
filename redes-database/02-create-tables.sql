@@ -103,6 +103,35 @@ BEGIN TRY
         PRINT N'La tabla dbo.NETWORK_PORT ya existe.';
     END;
 
+    IF OBJECT_ID(N'dbo.APP_USER', N'U') IS NULL
+    BEGIN
+        CREATE TABLE dbo.APP_USER
+        (
+            id            INT IDENTITY(1,1) NOT NULL,
+            email         NVARCHAR(150) NOT NULL,
+            display_name  NVARCHAR(100) NOT NULL,
+            password_hash VARCHAR(100) NOT NULL,
+            role          VARCHAR(20) NOT NULL,
+            is_active     BIT NOT NULL
+                CONSTRAINT DF_APP_USER_IS_ACTIVE DEFAULT (1),
+
+            CONSTRAINT PK_APP_USER
+                PRIMARY KEY CLUSTERED (id),
+            CONSTRAINT UQ_APP_USER_EMAIL
+                UNIQUE (email),
+            CONSTRAINT CK_APP_USER_ROLE
+                CHECK (role IN ('ADMIN', 'STUDENT')),
+            CONSTRAINT CK_APP_USER_PASSWORD_HASH
+                CHECK (LEN(password_hash) >= 60)
+        );
+
+        PRINT N'Tabla dbo.APP_USER creada.';
+    END
+    ELSE
+    BEGIN
+        PRINT N'La tabla dbo.APP_USER ya existe.';
+    END;
+
     IF NOT EXISTS
     (
         SELECT 1
@@ -137,4 +166,3 @@ BEGIN CATCH
     THROW;
 END CATCH;
 GO
-

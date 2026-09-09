@@ -1,6 +1,6 @@
-# Validación de la Fase 3
+# Validación del backend
 
-## Resultado automatizado
+## Validación base existente
 
 Comando ejecutado sobre una copia limpia del proyecto:
 
@@ -25,7 +25,7 @@ Spring Boot: 3.5.16
 
 ## Cobertura funcional mínima
 
-Las pruebas verifican:
+Las pruebas existentes verifican:
 
 - Caso de uso para consultar el puerto 443.
 - Excepción de dominio para un puerto inexistente.
@@ -37,6 +37,16 @@ Las pruebas verifican:
 - `GET /api/ports/443`.
 - Respuesta 404 estructurada.
 - `GET /api/development-flow`.
+
+La incorporación del inicio de sesión añade además:
+
+- Usuario web persistido en `APP_USER`.
+- Contraseña almacenada exclusivamente como hash BCrypt.
+- Sesión del servidor mediante cookie `HttpOnly`.
+- Token CSRF obligatorio para los `POST` de acceso y cierre de sesión.
+- Respuesta `401` para recursos educativos solicitados sin sesión.
+- Endpoint público `GET /api/health` para Docker y diagnóstico.
+- Pruebas unitarias de creación BCrypt del administrador y carga de su rol.
 
 ## Límite verificado de arquitectura
 
@@ -52,15 +62,30 @@ ejecutarse en Windows después de confirmar:
 Test-NetConnection 127.0.0.1 -Port 1433
 ```
 
-Luego se inicia el JAR con las variables `DB_URL`, `DB_USERNAME` y
-`DB_PASSWORD`, y se ejecuta:
+Luego se inicia el JAR con `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` y una
+`APP_ADMIN_PASSWORD` de al menos 12 caracteres. Para ejecutar la prueba
+autenticada:
 
 ```powershell
+$env:APP_ADMIN_EMAIL = "admin@osidev.local"
+$env:APP_ADMIN_PASSWORD = "SU_CONTRASENA_WEB"
 powershell -ExecutionPolicy Bypass -File .\scripts\smoke-test.ps1
 ```
 
 Ese smoke test valida la comunicación real:
 
 ```text
-HTTP → Spring Boot → JPA/JDBC → SQL Server
+Login + sesión → HTTP → Spring Boot → JPA/JDBC → SQL Server
 ```
+
+## Validación recomendada con Docker
+
+Desde la raíz del repositorio:
+
+```powershell
+.\iniciar-docker.cmd
+```
+
+El `Dockerfile` del backend ejecuta las pruebas Maven durante la construcción.
+El script espera la salud pública, obtiene el token CSRF, inicia sesión con el
+administrador generado y confirma que `/api/osi-layers` devuelve siete capas.

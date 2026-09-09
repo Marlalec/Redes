@@ -1,10 +1,13 @@
 package com.universidad.redes.infrastructure.adapter.out.persistence.mapper;
 
 import com.universidad.redes.domain.model.DevelopmentExample;
+import com.universidad.redes.domain.model.AppUser;
 import com.universidad.redes.domain.model.NetworkPort;
 import com.universidad.redes.domain.model.OsiLayer;
 import com.universidad.redes.domain.model.Protocol;
 import com.universidad.redes.domain.model.TransportType;
+import com.universidad.redes.domain.model.UserRole;
+import com.universidad.redes.infrastructure.adapter.out.persistence.entity.AppUserJpaEntity;
 import com.universidad.redes.infrastructure.adapter.out.persistence.entity.NetworkPortJpaEntity;
 import com.universidad.redes.infrastructure.adapter.out.persistence.entity.OsiLayerJpaEntity;
 import com.universidad.redes.infrastructure.adapter.out.persistence.entity.ProtocolJpaEntity;
@@ -43,6 +46,28 @@ public final class PersistenceMapper {
                 toDomain(entity.getProtocol()),
                 entity.getDescription(),
                 new DevelopmentExample(entity.getDevelopmentExample())
+        );
+    }
+
+    public static AppUser toDomain(AppUserJpaEntity entity) {
+        return new AppUser(
+                entity.getId(),
+                entity.getEmail(),
+                entity.getDisplayName(),
+                entity.getPasswordHash(),
+                UserRole.valueOf(entity.getRole()),
+                entity.getActive()
+        );
+    }
+
+    public static AppUserJpaEntity toEntity(AppUser user) {
+        return new AppUserJpaEntity(
+                user.id(),
+                user.email(),
+                user.displayName(),
+                user.passwordHash(),
+                user.role().name(),
+                user.active()
         );
     }
 }

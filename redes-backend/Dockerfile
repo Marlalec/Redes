@@ -21,6 +21,6 @@ USER app
 EXPOSE 8080
 
 HEALTHCHECK --interval=10s --timeout=5s --start-period=20s --retries=12 \
-    CMD wget -qO- http://127.0.0.1:8080/api/osi-layers >/dev/null || exit 1
+    CMD wget -qO- http://127.0.0.1:8080/api/health >/dev/null || exit 1
 
 ENTRYPOINT ["java", "-jar", "/app/redes-backend.jar"]

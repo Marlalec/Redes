@@ -1,7 +1,7 @@
 # OSI Dev Explorer — Backend
 
-API REST de solo lectura construida con Java 17, Spring Boot, Maven, Spring
-Data JPA y Microsoft SQL Server. Es el proyecto independiente
+API REST educativa construida con Java 17, Spring Boot, Spring Security, Maven,
+Spring Data JPA y Microsoft SQL Server. Es el proyecto independiente
 `redes-backend` de OSI Dev Explorer.
 
 ## Estado de la Fase 3
@@ -15,6 +15,7 @@ Incluye:
 - Validación de parámetros y manejo global de errores.
 - CORS limitado al frontend Vite durante desarrollo.
 - Credenciales mediante variables de entorno.
+- Autenticación con usuarios SQL Server, BCrypt, sesión `HttpOnly` y CSRF.
 - Pruebas de caso de uso, controladores y adaptador de persistencia.
 - Script PowerShell de smoke test.
 
@@ -24,7 +25,7 @@ Incluye:
 - Apache Maven 3.9 o superior.
 - `RedesDB` creada y validada mediante los scripts de la Fase 2.
 - Autenticación mixta de SQL Server habilitada.
-- Login `redes_app` con permiso de consulta.
+- Login técnico `redes_app` con permisos mínimos sobre las tablas requeridas.
 - TCP/IP habilitado para SQL Server en el puerto fijo 1433.
 
 Verificar Java y Maven desde CMD:
@@ -68,6 +69,9 @@ en `redes-backend`, definir las variables solo para esa sesión:
 set "DB_URL=jdbc:sqlserver://127.0.0.1:1433;databaseName=RedesDB;encrypt=true;trustServerCertificate=true;applicationName=OSI-Dev-Explorer"
 set "DB_USERNAME=redes_app"
 set "DB_PASSWORD=SU_CONTRASENA_LOCAL"
+set "APP_ADMIN_EMAIL=admin@osidev.local"
+set "APP_ADMIN_NAME=Administrador OSI"
+set "APP_ADMIN_PASSWORD=SU_CONTRASENA_WEB_DE_12_CARACTERES"
 ```
 
 No escribir ni compartir la contraseña real en capturas, commits o mensajes.
@@ -111,21 +115,17 @@ Started RedesApplication
 La API escucha únicamente en `127.0.0.1:8080` por defecto. Esto cumple el
 despliegue donde IIS es el punto de entrada público.
 
-## Probar la API
+El único endpoint de diagnóstico público es
+`http://127.0.0.1:8080/api/health`.
 
-Con el backend en ejecución, abrir otra ventana de CMD:
+## Probar la API autenticada
 
-```cmd
-curl.exe http://127.0.0.1:8080/api/osi-layers
-curl.exe http://127.0.0.1:8080/api/protocols
-curl.exe http://127.0.0.1:8080/api/ports
-curl.exe http://127.0.0.1:8080/api/ports/443
-curl.exe http://127.0.0.1:8080/api/development-flow
-```
-
-También puede ejecutarse la validación automática desde PowerShell:
+Los recursos educativos devuelven `401` cuando no existe una sesión. Con el
+backend en ejecución, abre PowerShell y utiliza la prueba incluida:
 
 ```powershell
+$env:APP_ADMIN_EMAIL = "admin@osidev.local"
+$env:APP_ADMIN_PASSWORD = "SU_CONTRASENA_WEB"
 powershell -ExecutionPolicy Bypass -File .\scripts\smoke-test.ps1
 ```
 
@@ -149,13 +149,7 @@ ello no se necesita abrir CORS hacia direcciones arbitrarias.
 
 ## Manejo de errores
 
-Ejemplo:
-
-```cmd
-curl.exe http://127.0.0.1:8080/api/ports/9999
-```
-
-Respuesta esperada:
+Con una sesión autenticada, consultar un puerto inexistente devuelve:
 
 ```json
 {
@@ -166,6 +160,9 @@ Respuesta esperada:
 
 La respuesta real añade `timestamp`, `error` y `path` para facilitar el
 diagnóstico sin exponer información interna.
+
+Sin una sesión válida, esa misma ruta devuelve primero HTTP `401`; esto evita
+exponer los recursos educativos antes del inicio de sesión.
 
 ## Solución de errores comunes
 
@@ -213,7 +210,7 @@ La Fase 3 se aprueba cuando:
 
 1. `mvn clean package` termina con `BUILD SUCCESS`.
 2. La aplicación inicia conectada a `RedesDB`.
-3. Los cinco endpoints devuelven HTTP 200.
+3. El acceso sin sesión devuelve HTTP 401 y el acceso autenticado devuelve 200.
 4. `/api/ports/443` devuelve HTTPS, TCP y la capa Aplicación.
 5. `/api/ports/9999` devuelve HTTP 404 con un mensaje claro.
 6. El smoke test termina correctamente.

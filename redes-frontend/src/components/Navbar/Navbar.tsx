@@ -1,17 +1,32 @@
 import { useState } from "react";
 import { Link, NavLink } from "react-router";
+import { useAuth } from "../../context/AuthContext";
 
 const navigation = [
   { to: "/modelo-osi", label: "Modelo OSI" },
   { to: "/protocolos", label: "Protocolos" },
-  { to: "/puertos", label: "Puertos" },
-  { to: "/osi-en-desarrollo", label: "OSI en desarrollo" },
+  { to: "/puertos", label: "Puertos" }
 ];
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const { user, logout } = useAuth();
 
   const closeMenu = () => setIsOpen(false);
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    closeMenu();
+
+    try {
+      await logout();
+    } catch (error) {
+      console.error("No fue posible cerrar la sesión en el servidor", error);
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   return (
     <>
@@ -62,10 +77,29 @@ export function Navbar() {
                 {item.label}
               </NavLink>
             ))}
+
+            {user ? (
+              <div className="nav-session">
+                <span className="nav-session__avatar" aria-hidden="true">
+                  {user.displayName.slice(0, 1).toUpperCase()}
+                </span>
+                <span className="nav-session__copy">
+                  <strong>{user.displayName}</strong>
+                  <small>{user.role === "ADMIN" ? "Administrador" : "Estudiante"}</small>
+                </span>
+                <button
+                  type="button"
+                  className="nav-session__logout"
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                >
+                  {isLoggingOut ? "Saliendo…" : "Cerrar sesión"}
+                </button>
+              </div>
+            ) : null}
           </nav>
         </div>
       </header>
     </>
   );
 }
-

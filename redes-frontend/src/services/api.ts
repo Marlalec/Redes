@@ -7,6 +7,7 @@ interface ApiErrorPayload {
 const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
 
 export const API_BASE_URL = (configuredBaseUrl || "/api").replace(/\/$/, "");
+export const AUTH_UNAUTHORIZED_EVENT = "osi-auth-unauthorized";
 
 export class ApiRequestError extends Error {
   readonly status: number;
@@ -33,19 +34,33 @@ async function readResponseBody(response: Response): Promise<unknown> {
   return text || null;
 }
 
-export async function apiGet<T>(path: string, signal?: AbortSignal): Promise<T> {
+interface ApiRequestOptions extends RequestInit {
+  notifyOnUnauthorized?: boolean;
+}
+
+export async function apiRequest<T>(
+  path: string,
+  options: ApiRequestOptions = {},
+): Promise<T> {
+  const { notifyOnUnauthorized = true, headers, ...requestOptions } = options;
+
   try {
     const response = await fetch(`${API_BASE_URL}${path}`, {
-      method: "GET",
+      credentials: "include",
+      ...requestOptions,
       headers: {
         Accept: "application/json",
+        ...headers,
       },
-      signal,
     });
 
     const body = await readResponseBody(response);
 
     if (!response.ok) {
+      if (response.status === 401 && notifyOnUnauthorized) {
+        window.dispatchEvent(new Event(AUTH_UNAUTHORIZED_EVENT));
+      }
+
       const message =
         isApiErrorPayload(body) && typeof body.message === "string"
           ? body.message
@@ -70,9 +85,37 @@ export async function apiGet<T>(path: string, signal?: AbortSignal): Promise<T> 
   }
 }
 
+export function apiGet<T>(
+  path: string,
+  signal?: AbortSignal,
+  notifyOnUnauthorized = true,
+): Promise<T> {
+  return apiRequest<T>(path, {
+    method: "GET",
+    signal,
+    notifyOnUnauthorized,
+  });
+}
+
+export function apiPost<T>(
+  path: string,
+  body: unknown,
+  headers: HeadersInit = {},
+  notifyOnUnauthorized = true,
+): Promise<T> {
+  return apiRequest<T>(path, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...headers,
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+    notifyOnUnauthorized,
+  });
+}
+
 export function getErrorMessage(error: unknown): string {
   return error instanceof Error
     ? error.message
     : "Ocurrió un error inesperado al consultar la información.";
 }
-

@@ -54,11 +54,15 @@ El contenido de `dist` será publicado en IIS durante la Fase 6.
 
 | Ruta | Función |
 |---|---|
-| `/` | Presentación y estado de conexión con la API |
+| `/login` | Inicio de sesión con el usuario almacenado en SQL Server |
+| `/` | Flujo real React → Spring Boot → SQL Server |
 | `/modelo-osi` | Capas OSI y protocolos relacionados |
-| `/protocolos` | Catálogo, búsqueda, detalle y puertos relacionados |
-| `/puertos` | Tabla, búsqueda y detalle de puertos lógicos |
-| `/osi-en-desarrollo` | Flujo real React → Spring Boot → SQL Server |
+| `/protocolos` | Catálogo, búsqueda por nombre y detalle desplegable |
+| `/puertos` | Tabla paginada, búsqueda por servicio y detalle desplegable |
+
+Salvo `/login`, las rutas requieren una sesión válida. El backend conserva la
+sesión en una cookie `HttpOnly` y el frontend envía un token CSRF en las
+operaciones `POST` de acceso y cierre de sesión.
 
 ## Separación de responsabilidades
 
@@ -88,11 +92,13 @@ frontend.
 ## Verificación manual
 
 1. Confirmar que Spring Boot continúa ejecutándose en el puerto 8080.
-2. Ejecutar `npm run dev`.
-3. Abrir las cinco rutas desde la barra de navegación.
-4. Buscar `HTTP` en Protocolos.
-5. Buscar `443` en Puertos y revisar su detalle.
-6. Verificar que Modelo OSI muestre siete capas.
-7. Verificar que OSI en desarrollo muestre ocho pasos y los puertos 80, 443,
+2. Definir `APP_ADMIN_PASSWORD` al arrancar el backend.
+3. Ejecutar `npm run dev` e iniciar sesión.
+4. Abrir las cuatro rutas desde la barra de navegación.
+5. Buscar `HTTP` en Protocolos.
+6. Buscar `HTTPS` en Puertos y revisar su detalle.
+7. Verificar que Modelo OSI muestre siete capas.
+8. Verificar que Inicio muestre ocho pasos y los puertos 80, 443,
    8080 y 1433.
-8. Detener Vite con `Ctrl + C`.
+9. Cerrar sesión y confirmar el regreso a `/login`.
+10. Detener Vite con `Ctrl + C`.

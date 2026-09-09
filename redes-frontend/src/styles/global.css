@@ -14,8 +14,9 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background:
-    radial-gradient(circle at 8% 8%, rgba(85, 113, 245, 0.06), transparent 28rem),
-    #f4f7fb;
+    radial-gradient(circle at 8% 8%, rgba(91, 146, 229, 0.12), transparent 30rem),
+    radial-gradient(circle at 92% 20%, rgba(57, 189, 176, 0.08), transparent 25rem),
+    #f7fbff;
   color: var(--ink-900);
 }
 
@@ -163,30 +164,32 @@ code {
 }
 
 .button--primary {
-  background: var(--teal-500);
-  color: #071e25;
-  box-shadow: 0 10px 30px rgba(36, 185, 168, 0.25);
+  background: linear-gradient(135deg, var(--blue-600), #4ea2dd);
+  color: #fff;
+  box-shadow: 0 10px 28px rgba(57, 120, 212, 0.24);
 }
 
 .button--primary:hover {
-  background: #40cabb;
+  background: linear-gradient(135deg, #2f6fc9, #3998d8);
 }
 
 .button--ghost {
-  border-color: rgba(255, 255, 255, 0.28);
-  color: #fff;
+  border-color: #bfd5e8;
+  background: rgba(255, 255, 255, 0.68);
+  color: var(--blue-600);
 }
 
 .button--ghost:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: #fff;
 }
 
 .button--small {
   min-height: 38px;
   margin-top: 8px;
   padding: 0.5rem 0.85rem;
-  background: var(--navy-900);
-  color: #fff;
+  border-color: #c9dded;
+  background: #eaf5fb;
+  color: #27628f;
   font-size: 0.88rem;
 }
 
@@ -243,4 +246,3 @@ code {
     animation-iteration-count: 1 !important;
   }
 }
-

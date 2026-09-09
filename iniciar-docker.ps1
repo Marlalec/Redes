@@ -32,6 +32,33 @@ function Get-DotEnvValue {
     return $DefaultValue
 }
 
+function Set-DotEnvValue {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)][string]$Name,
+        [Parameter(Mandatory = $true)][string]$Value
+    )
+
+    $lines = @(Get-Content -LiteralPath $Path)
+    $pattern = "^\s*" + [Regex]::Escape($Name) + "\s*="
+    $updated = $false
+
+    for ($index = 0; $index -lt $lines.Count; $index++) {
+        if ($lines[$index] -match $pattern) {
+            $lines[$index] = "$Name=$Value"
+            $updated = $true
+            break
+        }
+    }
+
+    if (-not $updated) {
+        $lines += "$Name=$Value"
+    }
+
+    $utf8WithoutBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllLines($Path, $lines, $utf8WithoutBom)
+}
+
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
     throw "Docker no esta instalado o no aparece en PATH. Instala Docker Desktop y abre una PowerShell nueva."
 }
@@ -49,10 +76,15 @@ if ($LASTEXITCODE -ne 0) {
 if (-not (Test-Path -LiteralPath $EnvFile)) {
     $saPassword = New-StrongPassword
     $appPassword = New-StrongPassword
+    $webPassword = New-StrongPassword
     $content = @(
         "# Generado automaticamente por iniciar-docker.ps1. No compartir ni subir a Git."
         "MSSQL_SA_PASSWORD=$saPassword"
         "DB_PASSWORD=$appPassword"
+        "APP_ADMIN_EMAIL=admin@osidev.local"
+        "APP_ADMIN_NAME=Administrador OSI"
+        "APP_ADMIN_PASSWORD=$webPassword"
+        "SESSION_COOKIE_SECURE=false"
         "FRONTEND_PORT=5173"
         "BACKEND_PORT=8080"
         "SQLSERVER_PORT=14330"
@@ -61,6 +93,25 @@ if (-not (Test-Path -LiteralPath $EnvFile)) {
     $utf8WithoutBom = New-Object System.Text.UTF8Encoding($false)
     [System.IO.File]::WriteAllLines($EnvFile, $content, $utf8WithoutBom)
     Write-Host "Configuracion local creada de forma segura en .env." -ForegroundColor Green
+}
+
+$adminEmail = Get-DotEnvValue -Path $EnvFile -Name "APP_ADMIN_EMAIL" -DefaultValue ""
+if ([string]::IsNullOrWhiteSpace($adminEmail)) {
+    $adminEmail = "admin@osidev.local"
+    Set-DotEnvValue -Path $EnvFile -Name "APP_ADMIN_EMAIL" -Value $adminEmail
+}
+
+$adminName = Get-DotEnvValue -Path $EnvFile -Name "APP_ADMIN_NAME" -DefaultValue ""
+if ([string]::IsNullOrWhiteSpace($adminName)) {
+    $adminName = "Administrador OSI"
+    Set-DotEnvValue -Path $EnvFile -Name "APP_ADMIN_NAME" -Value $adminName
+}
+
+$adminPassword = Get-DotEnvValue -Path $EnvFile -Name "APP_ADMIN_PASSWORD" -DefaultValue ""
+if ([string]::IsNullOrWhiteSpace($adminPassword) -or $adminPassword.StartsWith("CAMBIAR_")) {
+    $adminPassword = New-StrongPassword
+    Set-DotEnvValue -Path $EnvFile -Name "APP_ADMIN_PASSWORD" -Value $adminPassword
+    Write-Host "Se agregaron credenciales de acceso web al archivo .env." -ForegroundColor Green
 }
 
 & docker compose config --quiet
@@ -88,7 +139,26 @@ $ready = $false
 
 do {
     try {
-        $layers = Invoke-RestMethod -Uri "$frontendUrl/api/osi-layers" -Method Get -TimeoutSec 5
+        $health = Invoke-RestMethod -Uri "$frontendUrl/api/health" -Method Get -TimeoutSec 5
+        if ($health.status -ne "UP") {
+            throw "La API todavía no está lista."
+        }
+
+        $webSession = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+        $csrf = Invoke-RestMethod -Uri "$frontendUrl/api/auth/csrf" -Method Get -WebSession $webSession -TimeoutSec 5
+        $csrfHeaders = @{}
+        $csrfHeaders[$csrf.headerName] = $csrf.token
+        $loginBody = @{
+            email = $adminEmail
+            password = $adminPassword
+        } | ConvertTo-Json
+
+        Invoke-RestMethod -Uri "$frontendUrl/api/auth/login" -Method Post `
+            -WebSession $webSession -Headers $csrfHeaders `
+            -ContentType "application/json" -Body $loginBody -TimeoutSec 5 | Out-Null
+
+        $layers = Invoke-RestMethod -Uri "$frontendUrl/api/osi-layers" -Method Get `
+            -WebSession $webSession -TimeoutSec 5
         if (@($layers).Count -eq 7) {
             $ready = $true
             break
@@ -113,5 +183,8 @@ Write-Host "AMBIENTE INICIADO CORRECTAMENTE" -ForegroundColor Green
 Write-Host "Web:        $frontendUrl" -ForegroundColor Green
 Write-Host "API:        http://127.0.0.1:$backendPort/api/osi-layers"
 Write-Host "SQL Server: 127.0.0.1,$sqlServerPort"
+Write-Host "Usuario web: $adminEmail" -ForegroundColor Cyan
+Write-Host "Contrasena:  $adminPassword" -ForegroundColor Cyan
+Write-Host "Estas credenciales tambien quedan guardadas localmente en .env."
 Write-Host ""
 Write-Host "Para detenerlo: docker compose down"

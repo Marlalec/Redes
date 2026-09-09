@@ -8,6 +8,7 @@ La base de datos contiene información educativa sobre:
 - Protocolos de red y su asociación pedagógica con el modelo OSI.
 - Puertos lógicos y servicios relacionados.
 - Ejemplos aplicados al flujo React → IIS → Spring Boot → SQL Server.
+- Usuarios de la aplicación con contraseñas almacenadas como hash BCrypt.
 
 ## Modelo
 
@@ -26,6 +27,8 @@ NETWORK_PORT → PROTOCOL.transport_type
 ```
 
 Esto evita almacenar valores duplicados y potencialmente inconsistentes.
+`APP_USER` es independiente del catálogo educativo: identifica a quienes
+inician sesión en la web y no representa un login de SQL Server.
 
 ## Archivos
 
@@ -34,7 +37,7 @@ Esto evita almacenar valores duplicados y potencialmente inconsistentes.
 | 1 | `01-create-database.sql` | Crea `RedesDB` si todavía no existe |
 | 2 | `02-create-tables.sql` | Crea tablas, restricciones, llaves e índices |
 | 3 | `03-insert-initial-data.sql` | Inserta o actualiza capas, protocolos y puertos |
-| 4 | `04-create-app-login.template.sql` | Plantilla para crear `redes_app` con solo lectura |
+| 4 | `04-create-app-login.template.sql` | Plantilla para crear `redes_app` con permisos mínimos |
 | 5 | `05-queries-demo.sql` | Consultas de exposición y validaciones automáticas |
 
 Los tres primeros scripts son seguros para reejecución: no duplican datos ni vuelven a crear objetos existentes.
@@ -111,9 +114,12 @@ CONNECT en RedesDB
 SELECT sobre dbo.OSI_LAYER
 SELECT sobre dbo.PROTOCOL
 SELECT sobre dbo.NETWORK_PORT
+SELECT, INSERT y UPDATE sobre dbo.APP_USER
 ```
 
-No tiene permisos de inserción, actualización, eliminación ni modificación del esquema.
+No puede escribir en las tablas educativas, eliminar filas ni modificar el
+esquema. La escritura limitada sobre `APP_USER` permite crear y actualizar el
+administrador web desde Spring Boot.
 
 ### Habilitar autenticación mixta
 
@@ -180,6 +186,7 @@ Después de ejecutar los scripts deben existir:
 | Capas OSI | 7 |
 | Protocolos | 15 |
 | Puertos | 13 |
+| Usuarios web | Se crea al iniciar Spring Boot |
 
 Los protocolos adicionales `Ethernet`, `IPv4`, `TLS`, `TDS`, `MySQL Protocol` y `PostgreSQL Wire Protocol` permiten explicar correctamente las capas y los puertos de infraestructura.
 
@@ -214,5 +221,5 @@ La fase se considera aprobada cuando:
 - Los cinco scripts terminan sin errores.
 - `05-queries-demo.sql` devuelve estado `OK`.
 - `Test-NetConnection 127.0.0.1 -Port 1433` es exitoso.
-- El usuario `redes_app` puede ejecutar `SELECT`.
-- El usuario `redes_app` no puede modificar las tablas.
+- El usuario `redes_app` puede leer el catálogo y gestionar `APP_USER`.
+- El usuario `redes_app` no puede modificar las tablas educativas ni el esquema.

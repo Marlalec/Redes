@@ -16,6 +16,11 @@ http://IP-SERVIDOR/api
 
 | Método | Ruta | Resultado |
 |---|---|---|
+| GET | `/api/health` | Diagnóstico público del backend |
+| GET | `/api/auth/csrf` | Token CSRF para operaciones POST |
+| POST | `/api/auth/login` | Valida credenciales e inicia la sesión |
+| GET | `/api/auth/session` | Usuario de la sesión actual |
+| POST | `/api/auth/logout` | Cierra e invalida la sesión |
 | GET | `/api/osi-layers` | Siete capas, ordenadas de 7 a 1 |
 | GET | `/api/osi-layers/{id}` | Capa identificada por su llave primaria |
 | GET | `/api/protocols` | Protocolos ordenados alfabéticamente |
@@ -24,7 +29,24 @@ http://IP-SERVIDOR/api
 | GET | `/api/ports/{number}` | Puerto consultado por número lógico |
 | GET | `/api/development-flow` | Flujo y aplicación académica del modelo OSI |
 
-Todos los endpoints son de solo lectura.
+Los endpoints educativos requieren autenticación. Solo `/api/health`,
+`/api/auth/csrf` y `/api/auth/login` son públicos. Las consultas educativas
+siguen siendo de solo lectura.
+
+## Inicio de sesión
+
+Antes de un `POST`, consulta `/api/auth/csrf` y envía el valor recibido en el
+encabezado indicado por `headerName`. El login recibe:
+
+```json
+{
+  "email": "admin@osidev.local",
+  "password": "contraseña configurada en APP_ADMIN_PASSWORD"
+}
+```
+
+La respuesta devuelve `id`, `email`, `displayName` y `role`. La cookie de
+sesión es `HttpOnly`, por lo que JavaScript no accede a su contenido.
 
 ## Ejemplo: puerto 443
 
@@ -65,7 +87,10 @@ un protocolo tenga un identificador numérico específico.
 | Estado | Uso |
 |---:|---|
 | 200 | Consulta exitosa |
+| 204 | Cierre de sesión exitoso |
 | 400 | Parámetro inválido, por ejemplo un puerto fuera de 1–65535 |
+| 401 | No existe sesión o las credenciales no son correctas |
+| 403 | La operación no está permitida o falta un CSRF válido |
 | 404 | Capa, protocolo, puerto o ruta inexistente |
 | 503 | SQL Server no está disponible o la consulta falló |
 | 500 | Error interno no esperado |

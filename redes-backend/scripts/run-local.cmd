@@ -10,6 +10,12 @@ if "%DB_PASSWORD%"=="" (
 if "%DB_USERNAME%"=="" set "DB_USERNAME=redes_app"
 if "%DB_URL%"=="" set "DB_URL=jdbc:sqlserver://127.0.0.1:1433;databaseName=RedesDB;encrypt=true;trustServerCertificate=true;applicationName=OSI-Dev-Explorer"
 
+if "%APP_ADMIN_PASSWORD%"=="" (
+    echo ERROR: Debe definir APP_ADMIN_PASSWORD con al menos 12 caracteres.
+    echo Ejemplo: set "APP_ADMIN_PASSWORD=SU_PASSWORD_WEB_LOCAL"
+    exit /b 1
+)
+
 if not exist "target\redes-backend.jar" (
     echo ERROR: No existe target\redes-backend.jar.
     echo Ejecute primero: mvn clean package

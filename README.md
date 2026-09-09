@@ -4,9 +4,10 @@ El proyecto puede levantarse completo con un solo comando. Docker ejecuta:
 
 1. SQL Server 2025 Developer.
 2. La creación y carga automática de `RedesDB`.
-3. La creación del usuario `redes_app` con permisos de solo lectura.
+3. La creación del usuario técnico `redes_app` con permisos mínimos.
 4. La API Spring Boot en Java 17.
 5. El frontend React compilado y publicado con Nginx.
+6. Un administrador web almacenado en SQL Server con contraseña BCrypt.
 
 No necesitas instalar Java, Maven, Node.js ni SQL Server para usar esta modalidad.
 
@@ -35,13 +36,14 @@ Abre PowerShell en la carpeta `Redes` y ejecuta:
 
 En la primera ejecución el script:
 
-- crea `.env` con dos contraseñas aleatorias fuertes;
+- crea `.env` con tres contraseñas aleatorias fuertes;
 - construye frontend y backend;
 - descarga las imágenes oficiales;
 - espera a que SQL Server esté listo;
 - crea tablas y datos de prueba;
 - valida los 7 registros de capas, 15 protocolos y 13 puertos;
 - espera hasta que la aplicación responda correctamente.
+- muestra el correo y la contraseña para iniciar sesión en la web.
 
 La primera construcción puede tardar varios minutos. Las siguientes son más rápidas.
 
@@ -50,6 +52,9 @@ Cuando aparezca `AMBIENTE INICIADO CORRECTAMENTE`, abre:
 ```text
 http://127.0.0.1:5173
 ```
+
+Utiliza las credenciales indicadas por el script. Por defecto, el correo es
+`admin@osidev.local`; la contraseña es aleatoria y permanece solo en tu `.env`.
 
 ## Servicios y puertos
 
@@ -70,7 +75,7 @@ Navegador :5173
             → JDBC/TDS → SQL Server :1433
 ```
 
-El navegador utiliza una sola dirección. Nginx entrega React y reenvía internamente las solicitudes `/api`, por lo que el frontend no conoce credenciales ni se conecta directamente a la base.
+El navegador utiliza una sola dirección. Nginx entrega React y reenvía internamente las solicitudes `/api`. La sesión viaja en una cookie `HttpOnly`; el frontend nunca conoce credenciales de SQL Server ni se conecta directamente a la base.
 
 ## Comandos útiles
 
@@ -113,17 +118,20 @@ Reconstruir después de modificar código:
 .\iniciar-docker.cmd
 ```
 
-## Validación rápida
+## Validación rápida autenticada
 
-Con el ambiente iniciado:
+Con el ambiente iniciado, carga las credenciales locales sin mostrarlas y
+ejecuta el smoke test:
 
 ```powershell
-(Invoke-RestMethod http://127.0.0.1:5173/api/osi-layers).Count
-(Invoke-RestMethod http://127.0.0.1:5173/api/protocols).Count
-(Invoke-RestMethod http://127.0.0.1:5173/api/ports).Count
+$config = Get-Content .\.env | ConvertFrom-StringData
+.\redes-backend\scripts\smoke-test.ps1 `
+  -BaseUrl "http://127.0.0.1:5173" `
+  -Email $config.APP_ADMIN_EMAIL `
+  -Password $config.APP_ADMIN_PASSWORD
 ```
 
-Debe devolver, en orden:
+Debe validar el inicio de sesión y devolver conteos de:
 
 ```text
 7
@@ -131,10 +139,10 @@ Debe devolver, en orden:
 13
 ```
 
-También puedes abrir directamente:
+La salud pública del backend puede comprobarse directamente en:
 
 ```text
-http://127.0.0.1:8080/api/ports/443
+http://127.0.0.1:8080/api/health
 ```
 
 ## Conexión opcional desde SSMS
@@ -148,13 +156,13 @@ Usuario: sa
 Contraseña: valor MSSQL_SA_PASSWORD del archivo .env
 ```
 
-El backend no utiliza `sa`; se conecta con `redes_app`, que solo puede consultar las tres tablas educativas.
+El backend no utiliza `sa`; se conecta con `redes_app`, que puede consultar las tablas educativas y gestionar únicamente `APP_USER`. No puede borrar datos ni modificar el esquema.
 
 ## Credenciales
 
 El archivo `.env` se genera únicamente en tu equipo y está excluido por `.gitignore`. No lo subas a Git ni lo compartas.
 
-Si necesitas definir valores manuales, copia `.env.example` como `.env`, cambia las dos contraseñas y conserva al menos 12 caracteres con mayúscula, minúscula, número y símbolo.
+Si necesitas definir valores manuales, copia `.env.example` como `.env`, cambia las tres contraseñas y conserva al menos 12 caracteres con mayúscula, minúscula, número y símbolo.
 
 ## Cambiar puertos
 
