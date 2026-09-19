@@ -149,20 +149,31 @@
 }
 
 .nav-session__logout {
-  min-height: 36px;
-  padding: 0.5rem 0.72rem;
-  border: 1px solid #cbddea;
-  border-radius: 9px;
-  background: #f5fafd;
-  color: #38637f;
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  padding: 0;
+  place-content: center;
+  border: 1px solid #efb8c3;
+  border-radius: 50%;
+  background: #fff1f3;
+  color: var(--danger);
   cursor: pointer;
-  font-size: 0.72rem;
-  font-weight: 750;
+  transition: color 160ms ease, background 160ms ease,
+    border-color 160ms ease, transform 160ms ease;
+}
+
+.nav-session__logout svg {
+  width: 19px;
+  height: 19px;
 }
 
 .nav-session__logout:hover:not(:disabled) {
-  border-color: #9fc6dc;
-  background: #eaf6fc;
+  border-color: var(--danger);
+  background: var(--danger);
+  color: #fff;
+  transform: translateY(-1px);
 }
 
 .nav-session__logout:disabled {
