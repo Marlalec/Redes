@@ -58,11 +58,46 @@ services:
       SESSION_COOKIE_SECURE: "${SESSION_COOKIE_SECURE:-false}"
       CORS_ALLOWED_ORIGINS: "http://localhost:${FRONTEND_PORT:-5173},http://127.0.0.1:${FRONTEND_PORT:-5173}"
       JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75.0 -Dfile.encoding=UTF-8"
+      FACIAL_SERVICE_ENABLED: "${FACIAL_SERVICE_ENABLED:-true}"
+      FACIAL_SERVICE_URL: "http://facial-service:8090"
+      FACE_INTERNAL_TOKEN: "${FACE_INTERNAL_TOKEN:?Ejecuta iniciar-docker.cmd para generar la configuracion facial}"
+      FACE_PENDING_TIMEOUT_SECONDS: "300"
+      FACE_LIVENESS_ENABLED: "${FACE_LIVENESS_ENABLED:-true}"
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     depends_on:
       db-init:
         condition: service_completed_successfully
+      facial-service:
+        condition: service_healthy
+    restart: unless-stopped
+
+  facial-service:
+    build:
+      context: ./facial-service
+      dockerfile: Dockerfile
+    environment:
+      CAMERA_HOST: "${CAMERA_HOST:-192.168.1.27}"
+      CAMERA_PORT: "${CAMERA_PORT:-554}"
+      CAMERA_USERNAME: "${CAMERA_USERNAME:?Ejecuta iniciar-docker.cmd para configurar el usuario RTSP}"
+      CAMERA_PASSWORD: "${CAMERA_PASSWORD:?Ejecuta iniciar-docker.cmd para configurar la contrasena RTSP}"
+      CAMERA_RTSP_PATH: "${CAMERA_RTSP_PATH:-/live/ch00_0}"
+      FACE_INTERNAL_TOKEN: "${FACE_INTERNAL_TOKEN:?Ejecuta iniciar-docker.cmd para generar la configuracion facial}"
+      FACE_DATA_KEY: "${FACE_DATA_KEY:?Ejecuta iniciar-docker.cmd para generar la clave de cifrado facial}"
+      FACE_DATA_DIR: /app/data/embeddings
+      FACE_DETECTION_THRESHOLD: "${FACE_DETECTION_THRESHOLD:-0.70}"
+      FACE_MATCH_THRESHOLD: "${FACE_MATCH_THRESHOLD:-0.45}"
+      FACE_REQUIRED_SAMPLES: "${FACE_REQUIRED_SAMPLES:-8}"
+      FACE_CAPTURE_TIMEOUT_SECONDS: "${FACE_CAPTURE_TIMEOUT_SECONDS:-14}"
+      FACE_SAMPLE_INTERVAL_MS: "${FACE_SAMPLE_INTERVAL_MS:-300}"
+      FACE_MIN_FACE_PIXELS: "${FACE_MIN_FACE_PIXELS:-120}"
+      FACE_MIN_BLUR_VARIANCE: "${FACE_MIN_BLUR_VARIANCE:-30}"
+      FACE_LIVENESS_ENABLED: "${FACE_LIVENESS_ENABLED:-true}"
+      FACE_LIVENESS_MIN_MOVEMENT: "${FACE_LIVENESS_MIN_MOVEMENT:-0.035}"
+    expose:
+      - "8090"
+    volumes:
+      - facial-templates:/app/data/embeddings
     restart: unless-stopped
 
   frontend:
@@ -79,3 +114,5 @@ services:
 volumes:
   sqlserver-data:
     name: osi-dev-explorer-sqlserver-data
+  facial-templates:
+    name: osi-dev-explorer-facial-templates

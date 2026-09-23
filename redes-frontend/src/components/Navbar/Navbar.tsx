@@ -6,6 +6,8 @@ const navigation = [
   { to: "/modelo-osi", label: "Modelo OSI" },
   { to: "/protocolos", label: "Protocolos" },
   { to: "/puertos", label: "Puertos" },
+  { to: "/seguridad-facial", label: "Seguridad facial" },
+  { to: "/vigilancia", label: "Vigilancia" },
 ];
 
 export function Navbar() {

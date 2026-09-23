@@ -9,3 +9,5 @@
 *.log
 
 redes-database/04-create-app-login.local.sql
+facial-service/data/embeddings/*.face
+facial-service/data/embeddings/*.tmp

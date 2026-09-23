@@ -7,18 +7,20 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { AuthUser, LoginCredentials } from "../models/Auth";
+import type { AuthUser, LoginCredentials, PasswordLoginResponse } from "../models/Auth";
 import { ApiRequestError, AUTH_UNAUTHORIZED_EVENT } from "../services/api";
 import {
   getCurrentSession,
   login as loginRequest,
   logout as logoutRequest,
+  verifyFace as verifyFaceRequest,
 } from "../services/authService";
 
 interface AuthContextValue {
   user: AuthUser | null;
   isCheckingSession: boolean;
-  login: (credentials: LoginCredentials) => Promise<AuthUser>;
+  login: (credentials: LoginCredentials) => Promise<PasswordLoginResponse>;
+  verifyFace: () => Promise<AuthUser>;
   logout: () => Promise<void>;
 }
 
@@ -54,9 +56,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(async (credentials: LoginCredentials) => {
-    const authenticatedUser = await loginRequest(credentials);
-    setUser(authenticatedUser);
-    return authenticatedUser;
+    const result = await loginRequest(credentials);
+    if (result.status === "AUTHENTICATED" && result.user) {
+      setUser(result.user);
+    }
+    return result;
+  }, []);
+
+  const verifyFace = useCallback(async () => {
+    const result = await verifyFaceRequest();
+    setUser(result.user);
+    return result.user;
   }, []);
 
   const logout = useCallback(async () => {
@@ -68,8 +78,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, isCheckingSession, login, logout }),
-    [user, isCheckingSession, login, logout],
+    () => ({ user, isCheckingSession, login, verifyFace, logout }),
+    [user, isCheckingSession, login, verifyFace, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

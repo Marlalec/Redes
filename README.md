@@ -1,24 +1,54 @@
-# OSI Dev Explorer — ambiente completo con Docker
+# OSI Dev Explorer — fase de autenticación facial
 
-El proyecto puede levantarse completo con un solo comando. Docker ejecuta:
+Aplicación educativa de redes con React, Spring Boot, SQL Server y verificación
+facial 1:1 mediante una cámara JOOAN conectada por RTSP a la red interna.
 
-1. SQL Server 2025 Developer.
-2. La creación y carga automática de `RedesDB`.
-3. La creación del usuario técnico `redes_app` con permisos mínimos.
-4. La API Spring Boot en Java 17.
-5. El frontend React compilado y publicado con Nginx.
-6. Un administrador web almacenado en SQL Server con contraseña BCrypt.
+## Qué quedó integrado
 
-No necesitas instalar Java, Maven, Node.js ni SQL Server para usar esta modalidad.
+- Inicio de sesión con correo y contraseña.
+- Registro facial voluntario desde **Seguridad facial**.
+- Segundo factor automático para las cuentas que ya tengan una plantilla.
+- Vista RTSP en vivo durante el segundo factor y progreso visual del escaneo.
+- Detección YuNet, representación SFace y comparación 1:1.
+- Captura de varias muestras, filtro de nitidez y un control básico de movimiento.
+- Máximo de tres no coincidencias por desafío y expiración a los cinco minutos.
+- Plantillas matemáticas cifradas en un volumen local; no se guardan fotografías.
+- Servicio facial aislado: el navegador nunca recibe la URL ni las credenciales RTSP.
 
-## Requisitos
+La primera entrada de un usuario que todavía no tenga plantilla se completa solo con
+contraseña. Esto permite entrar, abrir **Seguridad facial** y realizar el registro. A
+partir de ese momento, los accesos posteriores solicitan ambos factores.
+
+## Arquitectura
+
+| Componente | Tecnología | Acceso |
+|---|---|---|
+| Web | React + Nginx | `http://127.0.0.1:5173` |
+| API y sesiones | Spring Boot 3 + Java 17 | `http://127.0.0.1:8080` |
+| Reconocimiento | Python 3.12 + OpenCV | solo red Docker, puerto `8090` |
+| Datos educativos | SQL Server Developer | `127.0.0.1,14330` |
+| Cámara | JOOAN RTSP | IP definida en `CAMERA_HOST`, puerto `554` |
+
+Flujo de acceso protegido:
+
+```text
+React → contraseña → Spring Security → usuario con plantilla
+      → verificación interna → Python/OpenCV → RTSP/JOOAN
+      → coincidencia 1:1 → creación de la sesión autenticada
+```
+
+## Requisitos locales
 
 - Windows 10/11 de 64 bits.
-- Docker Desktop con contenedores Linux y WSL 2.
-- Al menos 4 GB de memoria asignada a Docker.
-- Puertos `5173` y `8080` disponibles.
+- Docker Desktop iniciado, con contenedores Linux y WSL 2.
+- PC y cámara conectados a la misma red interna.
+- La cámara debe responder en RTSP; el proyecto usa por defecto `/live/ch00_0`.
+- Al menos 4 GB de memoria para Docker.
+- Puertos `5173`, `8080` y `14330` disponibles en Windows.
 
-Verifica desde PowerShell:
+No se necesita tarjeta microSD: el reconocimiento procesa la transmisión en vivo.
+
+Comprueba Docker:
 
 ```powershell
 docker --version
@@ -26,7 +56,14 @@ docker compose version
 docker info
 ```
 
-## Inicio rápido
+La conectividad con la JOOAN puede validarse así:
+
+```powershell
+Test-Connection 192.168.1.27 -Count 2
+Test-NetConnection 192.168.1.27 -Port 554
+```
+
+## Inicio en un solo comando
 
 Abre PowerShell en la carpeta `Redes` y ejecuta:
 
@@ -34,18 +71,14 @@ Abre PowerShell en la carpeta `Redes` y ejecuta:
 .\iniciar-docker.cmd
 ```
 
-En la primera ejecución el script:
+En la primera ejecución, el script:
 
-- crea `.env` con tres contraseñas aleatorias fuertes;
-- construye frontend y backend;
-- descarga las imágenes oficiales;
-- espera a que SQL Server esté listo;
-- crea tablas y datos de prueba;
-- valida los 7 registros de capas, 15 protocolos y 13 puertos;
-- espera hasta que la aplicación responda correctamente.
-- muestra el correo y la contraseña para iniciar sesión en la web.
-
-La primera construcción puede tardar varios minutos. Las siguientes son más rápidas.
+1. crea un `.env` local excluido de Git;
+2. genera contraseñas y claves aleatorias;
+3. solicita el usuario y la contraseña RTSP sin mostrar esta última;
+4. inicia SQL Server, el inicializador, el servicio facial, Spring Boot y React;
+5. comprueba la salud de la aplicación;
+6. muestra las credenciales del administrador web.
 
 Cuando aparezca `AMBIENTE INICIADO CORRECTAMENTE`, abre:
 
@@ -53,150 +86,132 @@ Cuando aparezca `AMBIENTE INICIADO CORRECTAMENTE`, abre:
 http://127.0.0.1:5173
 ```
 
-Utiliza las credenciales indicadas por el script. Por defecto, el correo es
-`admin@osidev.local`; la contraseña es aleatoria y permanece solo en tu `.env`.
+El correo predeterminado es `admin@osidev.local`. La contraseña real se muestra al
+terminar y queda únicamente en el archivo local `.env`.
 
-## Servicios y puertos
+## Registrar el primer rostro
 
-| Servicio | Puerto en Windows | Puerto en Docker | Uso |
-|---|---:|---:|---|
-| React + Nginx | `5173` | `80` | Aplicación web y proxy de `/api` |
-| Spring Boot | `8080` | `8080` | Acceso directo para diagnóstico |
-| SQL Server | `14330` | `1433` | Acceso opcional desde SSMS |
+1. Inicia sesión con el correo y la contraseña.
+2. Abre **Seguridad facial** en la navegación.
+3. Ubícate frente a la cámara con un solo rostro visible y buena luz.
+4. Acepta el consentimiento de tratamiento biométrico.
+5. Presiona **Registrar mi rostro**.
+6. Mira al frente y mueve lentamente la cabeza hacia ambos lados.
 
-SQL Server se publica en `14330` para no chocar con una instalación local que ya utilice `1433`. Dentro de Docker, Spring Boot siempre se conecta a `sqlserver:1433`.
+La operación tarda normalmente entre 3 y 14 segundos. Al cerrar sesión y volver a
+entrar, la web mostrará el segundo paso facial después de validar la contraseña. En
+ese paso muestra la vista en vivo únicamente después de pulsar **Verificar mi
+rostro**, junto con el avance de las muestras procesadas.
 
-## Flujo del ambiente
+## Privacidad y seguridad
 
-```text
-Navegador :5173
-    → Nginx :80
-        → /api → Spring Boot :8080
-            → JDBC/TDS → SQL Server :1433
-```
+- La comparación es 1:1: nunca se busca una cara entre todas las personas.
+- Los fotogramas no se escriben a disco. La vista web recibe imágenes JPEG efímeras
+  solamente durante una sesión o desafío autorizado y las descarta al cerrar la vista.
+- La plantilla SFace se cifra con Fernet antes de guardarse.
+- La clave, el token interno y las credenciales RTSP viven en `.env`, nunca en Git.
+- El servicio facial no publica su puerto en Windows.
+- El usuario puede reemplazar o eliminar su plantilla desde la aplicación.
 
-El navegador utiliza una sola dirección. Nginx entrega React y reenvía internamente las solicitudes `/api`. La sesión viaja en una cookie `HttpOnly`; el frontend nunca conoce credenciales de SQL Server ni se conecta directamente a la base.
+El control de movimiento incluido es una demostración y no constituye detección de
+vida certificada. Para control de acceso real se requiere PAD/anti-spoofing evaluado,
+HTTPS, una política de retención, consentimiento conforme a la legislación aplicable
+y un método de recuperación que no dependa del rostro.
 
 ## Comandos útiles
 
-Ver el estado:
+Estado de todos los servicios:
 
 ```powershell
 docker compose ps
 ```
 
-Ver todos los logs:
+Logs relevantes:
 
 ```powershell
-docker compose logs -f
-```
-
-Ver solo un servicio:
-
-```powershell
+docker compose logs -f facial-service
 docker compose logs -f backend
 docker compose logs -f frontend
 docker compose logs -f sqlserver
-docker compose logs db-init
 ```
 
-Detener y eliminar los contenedores, conservando la base:
+Reconstruir después de cambiar código:
 
 ```powershell
-docker compose down
+.\iniciar-docker.cmd
 ```
 
-Volver a iniciar sin reconstruir imágenes:
+Reiniciar sin construir imágenes:
 
 ```powershell
 .\iniciar-docker.cmd -NoBuild
 ```
 
-Reconstruir después de modificar código:
+Detener conservando base y plantillas:
 
 ```powershell
-.\iniciar-docker.cmd
+docker compose down
 ```
 
-## Validación rápida autenticada
+## Recuperación si la cámara queda fuera de servicio
 
-Con el ambiente iniciado, carga las credenciales locales sin mostrarlas y
-ejecuta el smoke test:
-
-```powershell
-$config = Get-Content .\.env | ConvertFrom-StringData
-.\redes-backend\scripts\smoke-test.ps1 `
-  -BaseUrl "http://127.0.0.1:5173" `
-  -Email $config.APP_ADMIN_EMAIL `
-  -Password $config.APP_ADMIN_PASSWORD
-```
-
-Debe validar el inicio de sesión y devolver conteos de:
-
-```text
-7
-15
-13
-```
-
-La salud pública del backend puede comprobarse directamente en:
-
-```text
-http://127.0.0.1:8080/api/health
-```
-
-## Conexión opcional desde SSMS
-
-Usa:
-
-```text
-Servidor: 127.0.0.1,14330
-Autenticación: SQL Server
-Usuario: sa
-Contraseña: valor MSSQL_SA_PASSWORD del archivo .env
-```
-
-El backend no utiliza `sa`; se conecta con `redes_app`, que puede consultar las tablas educativas y gestionar únicamente `APP_USER`. No puede borrar datos ni modificar el esquema.
-
-## Credenciales
-
-El archivo `.env` se genera únicamente en tu equipo y está excluido por `.gitignore`. No lo subas a Git ni lo compartas.
-
-Si necesitas definir valores manuales, copia `.env.example` como `.env`, cambia las tres contraseñas y conserva al menos 12 caracteres con mayúscula, minúscula, número y símbolo.
-
-## Cambiar puertos
-
-Si `5173` u `8080` están ocupados por la ejecución local anterior, detén esas terminales con `Ctrl + C` o cambia en `.env`:
+Un administrador del servidor puede desactivar temporalmente el segundo factor
+cambiando en `.env`:
 
 ```properties
-FRONTEND_PORT=5174
-BACKEND_PORT=8081
-SQLSERVER_PORT=14330
+FACIAL_SERVICE_ENABLED=false
 ```
 
-Luego ejecuta nuevamente `iniciar-docker.cmd` y abre el nuevo puerto del frontend.
-
-## Reiniciar completamente la base
-
-Esta operación elimina los datos persistidos del SQL Server Docker:
+Después debe reconstruir el backend:
 
 ```powershell
-docker compose down --volumes
+docker compose up -d --build backend frontend
+```
+
+Esto es un mecanismo de recuperación administrativa y reduce la cuenta a contraseña;
+debe volver a `true` tan pronto se recupere la cámara.
+
+Para borrar **todas** las plantillas de forma irreversible:
+
+```powershell
+docker compose down
+docker volume rm osi-dev-explorer-facial-templates
 .\iniciar-docker.cmd
 ```
 
-Los scripts son idempotentes y volverán a crear `RedesDB` con sus datos iniciales.
+El volumen de SQL Server no se elimina con esos comandos.
 
-## Estructura Docker agregada
+## Pruebas
 
-| Archivo | Responsabilidad |
-|---|---|
-| `compose.yaml` | Orquesta los cuatro servicios y el volumen persistente |
-| `iniciar-docker.cmd` | Entrada de un comando para Windows |
-| `iniciar-docker.ps1` | Genera secretos, inicia y valida el ambiente |
-| `redes-backend/Dockerfile` | Compila, prueba y ejecuta Spring Boot |
-| `redes-frontend/Dockerfile` | Compila React y genera la imagen Nginx |
-| `redes-frontend/nginx.conf` | SPA, proxy `/api` y endpoint de salud |
-| `docker/sqlserver/init-db.sh` | Ejecuta los scripts SQL en orden |
+Frontend:
 
-La ejecución local tradicional con Java, npm y el SQL Server instalado en Windows sigue disponible; Docker es una modalidad adicional.
+```powershell
+Set-Location .\redes-frontend
+npm ci
+npm run build
+```
+
+Backend:
+
+```powershell
+Set-Location .\redes-backend
+mvn clean verify
+```
+
+Servicio facial nativo:
+
+```powershell
+Set-Location .\facial-service
+.\.venv\Scripts\Activate.ps1
+python -m unittest discover -s tests -v
+```
+
+El smoke test de la API funciona para un usuario sin plantilla. Si ya existe segundo
+factor, se detiene deliberadamente porque no intenta automatizar ni evadir biometría.
+
+## Windows Server 2016
+
+El Compose incluido es ideal para desarrollo en Windows 10/11. Para el servidor 2016
+de la red interna se recomienda el despliegue híbrido descrito en
+[`DESPLIEGUE_WINDOWS_SERVER_2016.md`](DESPLIEGUE_WINDOWS_SERVER_2016.md), porque Docker
+Desktop y los contenedores Linux no son una base soportada equivalente en ese sistema.

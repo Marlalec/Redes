@@ -114,6 +114,53 @@ export function apiPost<T>(
   });
 }
 
+export function apiDelete<T>(
+  path: string,
+  headers: HeadersInit = {},
+  notifyOnUnauthorized = true,
+): Promise<T> {
+  return apiRequest<T>(path, {
+    method: "DELETE",
+    headers,
+    notifyOnUnauthorized,
+  });
+}
+
+export async function apiBlob(
+  path: string,
+  signal?: AbortSignal,
+): Promise<Blob | null> {
+  try {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      method: "GET",
+      credentials: "include",
+      signal,
+      headers: { Accept: "image/jpeg" },
+      cache: "no-store",
+    });
+
+    if (response.status === 204) {
+      return null;
+    }
+    if (!response.ok) {
+      if (response.status === 401) {
+        window.dispatchEvent(new Event(AUTH_UNAUTHORIZED_EVENT));
+      }
+      const body = await readResponseBody(response);
+      const message =
+        isApiErrorPayload(body) && typeof body.message === "string"
+          ? body.message
+          : `La API respondió con el estado ${response.status}.`;
+      throw new ApiRequestError(message, response.status);
+    }
+    return response.blob();
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") throw error;
+    if (error instanceof ApiRequestError) throw error;
+    throw new ApiRequestError("No fue posible obtener la vista de la cámara.");
+  }
+}
+
 export function getErrorMessage(error: unknown): string {
   return error instanceof Error
     ? error.message

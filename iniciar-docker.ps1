@@ -14,6 +14,33 @@ function New-StrongPassword {
     return "Aa1!" + [Guid]::NewGuid().ToString("N")
 }
 
+function New-InternalToken {
+    return [Guid]::NewGuid().ToString("N") + [Guid]::NewGuid().ToString("N")
+}
+
+function New-FernetKey {
+    $bytes = New-Object byte[] 32
+    $generator = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+    try {
+        $generator.GetBytes($bytes)
+    }
+    finally {
+        $generator.Dispose()
+    }
+
+    return [Convert]::ToBase64String($bytes).Replace("+", "-").Replace("/", "_")
+}
+
+function ConvertTo-DotEnvLiteral {
+    param([Parameter(Mandatory = $true)][string]$Value)
+
+    if ($Value.Contains("`r") -or $Value.Contains("`n") -or $Value.Contains("'")) {
+        throw "Las credenciales RTSP no pueden contener saltos de linea ni comillas simples."
+    }
+
+    return "'$Value'"
+}
+
 function Get-DotEnvValue {
     param(
         [Parameter(Mandatory = $true)][string]$Path,
@@ -85,6 +112,21 @@ if (-not (Test-Path -LiteralPath $EnvFile)) {
         "APP_ADMIN_NAME=Administrador OSI"
         "APP_ADMIN_PASSWORD=$webPassword"
         "SESSION_COOKIE_SECURE=false"
+        "CAMERA_HOST=192.168.1.27"
+        "CAMERA_PORT=554"
+        "CAMERA_RTSP_PATH=/live/ch00_0"
+        "FACE_INTERNAL_TOKEN=$(New-InternalToken)"
+        "FACE_DATA_KEY=$(New-FernetKey)"
+        "FACIAL_SERVICE_ENABLED=true"
+        "FACE_LIVENESS_ENABLED=true"
+        "FACE_DETECTION_THRESHOLD=0.70"
+        "FACE_MATCH_THRESHOLD=0.45"
+        "FACE_REQUIRED_SAMPLES=8"
+        "FACE_CAPTURE_TIMEOUT_SECONDS=14"
+        "FACE_SAMPLE_INTERVAL_MS=300"
+        "FACE_MIN_FACE_PIXELS=120"
+        "FACE_MIN_BLUR_VARIANCE=30"
+        "FACE_LIVENESS_MIN_MOVEMENT=0.035"
         "FRONTEND_PORT=5173"
         "BACKEND_PORT=8080"
         "SQLSERVER_PORT=14330"
@@ -114,6 +156,61 @@ if ([string]::IsNullOrWhiteSpace($adminPassword) -or $adminPassword.StartsWith("
     Write-Host "Se agregaron credenciales de acceso web al archivo .env." -ForegroundColor Green
 }
 
+$faceToken = Get-DotEnvValue -Path $EnvFile -Name "FACE_INTERNAL_TOKEN" -DefaultValue ""
+if ([string]::IsNullOrWhiteSpace($faceToken) -or $faceToken.StartsWith("CAMBIAR_")) {
+    Set-DotEnvValue -Path $EnvFile -Name "FACE_INTERNAL_TOKEN" -Value (New-InternalToken)
+    Write-Host "Se genero el token privado del servicio facial." -ForegroundColor Green
+}
+
+$faceDataKey = Get-DotEnvValue -Path $EnvFile -Name "FACE_DATA_KEY" -DefaultValue ""
+if ([string]::IsNullOrWhiteSpace($faceDataKey) -or $faceDataKey.StartsWith("CAMBIAR_")) {
+    Set-DotEnvValue -Path $EnvFile -Name "FACE_DATA_KEY" -Value (New-FernetKey)
+    Write-Host "Se genero la clave local de cifrado biometrico." -ForegroundColor Green
+}
+
+$cameraDefaults = @{
+    "CAMERA_HOST" = "192.168.1.27"
+    "CAMERA_PORT" = "554"
+    "CAMERA_RTSP_PATH" = "/live/ch00_0"
+    "FACIAL_SERVICE_ENABLED" = "true"
+    "FACE_LIVENESS_ENABLED" = "true"
+    "FACE_DETECTION_THRESHOLD" = "0.70"
+    "FACE_MATCH_THRESHOLD" = "0.45"
+    "FACE_REQUIRED_SAMPLES" = "8"
+    "FACE_CAPTURE_TIMEOUT_SECONDS" = "14"
+    "FACE_SAMPLE_INTERVAL_MS" = "300"
+    "FACE_MIN_FACE_PIXELS" = "120"
+    "FACE_MIN_BLUR_VARIANCE" = "30"
+    "FACE_LIVENESS_MIN_MOVEMENT" = "0.035"
+}
+
+foreach ($entry in $cameraDefaults.GetEnumerator()) {
+    $currentValue = Get-DotEnvValue -Path $EnvFile -Name $entry.Key -DefaultValue ""
+    if ([string]::IsNullOrWhiteSpace($currentValue)) {
+        Set-DotEnvValue -Path $EnvFile -Name $entry.Key -Value $entry.Value
+    }
+}
+
+$cameraUsername = Get-DotEnvValue -Path $EnvFile -Name "CAMERA_USERNAME" -DefaultValue ""
+if ([string]::IsNullOrWhiteSpace($cameraUsername) -or $cameraUsername.StartsWith("CAMBIAR_")) {
+    $cameraUsername = Read-Host "Usuario RTSP de la camara JOOAN"
+    if ([string]::IsNullOrWhiteSpace($cameraUsername)) {
+        throw "El usuario RTSP es obligatorio para iniciar el servicio facial."
+    }
+    Set-DotEnvValue -Path $EnvFile -Name "CAMERA_USERNAME" -Value (ConvertTo-DotEnvLiteral $cameraUsername)
+}
+
+$cameraPassword = Get-DotEnvValue -Path $EnvFile -Name "CAMERA_PASSWORD" -DefaultValue ""
+if ([string]::IsNullOrWhiteSpace($cameraPassword) -or $cameraPassword.StartsWith("CAMBIAR_")) {
+    $secureCameraPassword = Read-Host "Contrasena RTSP de la camara JOOAN" -AsSecureString
+    $cameraCredential = New-Object System.Management.Automation.PSCredential($cameraUsername, $secureCameraPassword)
+    $cameraPassword = $cameraCredential.GetNetworkCredential().Password
+    if ([string]::IsNullOrWhiteSpace($cameraPassword)) {
+        throw "La contrasena RTSP es obligatoria para iniciar el servicio facial."
+    }
+    Set-DotEnvValue -Path $EnvFile -Name "CAMERA_PASSWORD" -Value (ConvertTo-DotEnvLiteral $cameraPassword)
+}
+
 & docker compose config --quiet
 if ($LASTEXITCODE -ne 0) {
     throw "La configuracion de Compose no es valida. Revisa el archivo .env y el mensaje anterior."
@@ -124,7 +221,7 @@ if (-not $NoBuild) {
     $composeArguments += "--build"
 }
 
-Write-Host "Iniciando SQL Server, base de datos, backend y frontend..." -ForegroundColor Cyan
+Write-Host "Iniciando SQL Server, servicio facial, backend y frontend..." -ForegroundColor Cyan
 & docker @composeArguments
 if ($LASTEXITCODE -ne 0) {
     throw "Docker no pudo iniciar el ambiente. Ejecuta: docker compose logs --tail 120"
@@ -136,6 +233,7 @@ $sqlServerPort = Get-DotEnvValue -Path $EnvFile -Name "SQLSERVER_PORT" -DefaultV
 $frontendUrl = "http://127.0.0.1:$frontendPort"
 $deadline = [DateTime]::UtcNow.AddMinutes(6)
 $ready = $false
+$faceRequired = $false
 
 do {
     try {
@@ -153,15 +251,23 @@ do {
             password = $adminPassword
         } | ConvertTo-Json
 
-        Invoke-RestMethod -Uri "$frontendUrl/api/auth/login" -Method Post `
+        $loginResponse = Invoke-RestMethod -Uri "$frontendUrl/api/auth/login" -Method Post `
             -WebSession $webSession -Headers $csrfHeaders `
-            -ContentType "application/json" -Body $loginBody -TimeoutSec 5 | Out-Null
+            -ContentType "application/json" -Body $loginBody -TimeoutSec 8
 
-        $layers = Invoke-RestMethod -Uri "$frontendUrl/api/osi-layers" -Method Get `
-            -WebSession $webSession -TimeoutSec 5
-        if (@($layers).Count -eq 7) {
+        if ($loginResponse.status -eq "FACE_REQUIRED") {
+            $faceRequired = $true
             $ready = $true
             break
+        }
+
+        if ($loginResponse.status -eq "AUTHENTICATED") {
+            $layers = Invoke-RestMethod -Uri "$frontendUrl/api/osi-layers" -Method Get `
+                -WebSession $webSession -TimeoutSec 5
+            if (@($layers).Count -eq 7) {
+                $ready = $true
+                break
+            }
         }
     }
     catch {
@@ -183,8 +289,12 @@ Write-Host "AMBIENTE INICIADO CORRECTAMENTE" -ForegroundColor Green
 Write-Host "Web:        $frontendUrl" -ForegroundColor Green
 Write-Host "API:        http://127.0.0.1:$backendPort/api/osi-layers"
 Write-Host "SQL Server: 127.0.0.1,$sqlServerPort"
+Write-Host "Camara RTSP: configurada en la red interna" -ForegroundColor Cyan
 Write-Host "Usuario web: $adminEmail" -ForegroundColor Cyan
 Write-Host "Contrasena:  $adminPassword" -ForegroundColor Cyan
 Write-Host "Estas credenciales tambien quedan guardadas localmente en .env."
+if ($faceRequired) {
+    Write-Host "Este usuario ya tiene rostro registrado: completa el segundo factor en el navegador." -ForegroundColor Yellow
+}
 Write-Host ""
 Write-Host "Para detenerlo: docker compose down"

@@ -1,6 +1,10 @@
 package com.universidad.redes.infrastructure.adapter.in.rest.error;
 
 import com.universidad.redes.domain.exception.ResourceNotFoundException;
+import com.universidad.redes.domain.exception.FacialCaptureException;
+import com.universidad.redes.domain.exception.FacialServiceUnavailableException;
+import com.universidad.redes.domain.exception.FacialVerificationFailedException;
+import com.universidad.redes.domain.exception.PendingAuthenticationException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
@@ -41,6 +45,30 @@ public class GlobalExceptionHandler {
             HttpServletRequest request
     ) {
         return buildResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request);
+    }
+
+    @ExceptionHandler({FacialVerificationFailedException.class, PendingAuthenticationException.class})
+    public ResponseEntity<ApiErrorResponse> handleFacialAuthenticationError(
+            RuntimeException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(HttpStatus.UNAUTHORIZED, exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(FacialCaptureException.class)
+    public ResponseEntity<ApiErrorResponse> handleFacialCaptureError(
+            FacialCaptureException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(HttpStatus.UNPROCESSABLE_ENTITY, exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(FacialServiceUnavailableException.class)
+    public ResponseEntity<ApiErrorResponse> handleFacialServiceUnavailable(
+            FacialServiceUnavailableException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(HttpStatus.SERVICE_UNAVAILABLE, exception.getMessage(), request);
     }
 
     @ExceptionHandler(NoResourceFoundException.class)

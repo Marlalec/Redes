@@ -14,6 +14,8 @@ import { NotFoundPage } from "../pages/NotFoundPage/NotFoundPage";
 import { OsiPage } from "../pages/OsiPage/OsiPage";
 import { PortsPage } from "../pages/PortsPage/PortsPage";
 import { ProtocolsPage } from "../pages/ProtocolsPage/ProtocolsPage";
+import { FaceSecurityPage } from "../pages/FaceSecurityPage/FaceSecurityPage";
+import { SurveillancePage } from "../pages/SurveillancePage/SurveillancePage";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -37,6 +39,8 @@ export function AppRoutes() {
             <Route path="modelo-osi" element={<OsiPage />} />
             <Route path="protocolos" element={<ProtocolsPage />} />
             <Route path="puertos" element={<PortsPage />} />
+            <Route path="seguridad-facial" element={<FaceSecurityPage />} />
+            <Route path="vigilancia" element={<SurveillancePage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Route>

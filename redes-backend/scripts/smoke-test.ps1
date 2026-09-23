@@ -19,10 +19,18 @@ $csrf = Invoke-RestMethod -Method Get -Uri ($BaseUrl + "/api/auth/csrf") -WebSes
 $csrfHeaders = @{}
 $csrfHeaders[$csrf.headerName] = $csrf.token
 $loginBody = @{ email = $Email; password = $Password } | ConvertTo-Json
-$authenticatedUser = Invoke-RestMethod -Method Post -Uri ($BaseUrl + "/api/auth/login") `
+$loginResponse = Invoke-RestMethod -Method Post -Uri ($BaseUrl + "/api/auth/login") `
     -WebSession $webSession -Headers $csrfHeaders -ContentType "application/json" -Body $loginBody
 
-Write-Host "OK - Sesión iniciada: $($authenticatedUser.email)"
+if ($loginResponse.status -eq "FACE_REQUIRED") {
+    throw "El usuario tiene segundo factor facial. Completa el acceso desde el navegador; el smoke test no simula biometría."
+}
+
+if ($loginResponse.status -ne "AUTHENTICATED" -or $null -eq $loginResponse.user) {
+    throw "La API devolvió un estado de autenticación inesperado."
+}
+
+Write-Host "OK - Sesión iniciada: $($loginResponse.user.email)"
 
 $tests = @(
     @{ Name = "Capas OSI"; Path = "/api/osi-layers"; MinimumCount = 7 },

@@ -74,7 +74,17 @@ public class SecurityConfiguration {
                 )
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/api/health", "/api/auth/login", "/api/auth/csrf")
+                        .requestMatchers(
+                                "/api/health",
+                                "/api/auth/login",
+                                "/api/auth/csrf",
+                                "/api/auth/face/verify",
+                                "/api/auth/face/cancel",
+                                "/api/auth/face/challenge/preview/start",
+                                "/api/auth/face/challenge/preview/status",
+                                "/api/auth/face/challenge/preview/frame",
+                                "/api/auth/face/challenge/preview/stop"
+                        )
                         .permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll()
