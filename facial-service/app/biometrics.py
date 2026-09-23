@@ -5,7 +5,6 @@ import threading
 import time
 from dataclasses import dataclass
 
-# FFmpeg debe recibir esta opción antes de abrir la captura.
 os.environ.setdefault("OPENCV_FFMPEG_CAPTURE_OPTIONS", "rtsp_transport;tcp")
 
 import cv2
@@ -159,8 +158,6 @@ class FaceEngine:
         if not should_wait:
             return
 
-        # La verificación facial necesita la misma cámara. Esperamos brevemente
-        # a que el lector RTSP libere el recurso antes de iniciar la captura.
         deadline = time.monotonic() + 2.0
         while time.monotonic() < deadline:
             with self._surveillance_lock:

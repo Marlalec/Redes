@@ -4,9 +4,15 @@
 **/node_modules/
 **/dist/
 **/target/
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/
 **/.idea/
+**/.vscode/
 *.iml
 *.log
+*.py[cod]
+.DS_Store
 
 redes-database/04-create-app-login.local.sql
 facial-service/data/embeddings/*.face

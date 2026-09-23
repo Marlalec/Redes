@@ -75,7 +75,6 @@ export function LoginPage() {
     try {
       await cancelFaceVerification();
     } catch {
-      // El desafío también expira automáticamente en el servidor.
     } finally {
       setPhase("credentials");
       setPassword("");

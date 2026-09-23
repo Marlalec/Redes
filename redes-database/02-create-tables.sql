@@ -1,9 +1,3 @@
-/*
-    Proyecto: OSI Dev Explorer
-    Script: 02-create-tables.sql
-    Objetivo: crear las tablas, restricciones e indices del modelo relacional.
-*/
-
 USE [RedesDB];
 GO
 

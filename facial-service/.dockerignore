@@ -4,5 +4,3 @@ __pycache__
 *.pyc
 tests
 data
-detect_faces.py
-test_rtsp.py

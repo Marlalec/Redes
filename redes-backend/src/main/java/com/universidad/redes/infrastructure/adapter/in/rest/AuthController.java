@@ -427,7 +427,6 @@ public class AuthController {
                         try {
                             facialIdentityPort.stopSurveillance(subjectId(user));
                         } catch (RuntimeException ignored) {
-                            // Cancelar el desafío no debe depender de la disponibilidad de la cámara.
                         }
                     });
         }

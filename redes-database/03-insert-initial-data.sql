@@ -1,11 +1,3 @@
-/*
-    Proyecto: OSI Dev Explorer
-    Script: 03-insert-initial-data.sql
-    Objetivo: cargar o actualizar los datos educativos iniciales.
-
-    El script es idempotente: puede ejecutarse nuevamente sin duplicar filas.
-*/
-
 USE [RedesDB];
 GO
 
@@ -291,4 +283,3 @@ BEGIN CATCH
     THROW;
 END CATCH;
 GO
-

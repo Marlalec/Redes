@@ -1609,7 +1609,6 @@
   line-height: 1.55;
 }
 
-/* Inicio de sesión con segundo factor facial */
 .login-card__icon--face {
   border-color: #bfdced;
   background: linear-gradient(145deg, #e6f4ff, #e8f8f4);
@@ -1690,7 +1689,6 @@
   text-decoration: underline;
 }
 
-/* Administración consentida de la plantilla facial */
 .face-security-page {
   min-height: calc(100vh - 72px);
 }
@@ -2174,7 +2172,6 @@
   }
 }
 
-/* Transmisión real durante el segundo factor del inicio de sesión */
 .login-face-preview {
   position: relative;
   overflow: hidden;
@@ -2319,7 +2316,6 @@
   }
 }
 
-/* Vigilancia interna */
 .surveillance-page {
   min-height: calc(100vh - 160px);
   padding-block: 42px 64px;
@@ -2549,7 +2545,6 @@
   }
 }
 
-/* Seguridad facial */
 .login-card__icon--face {
   border-color: #cbdcf7;
   background: linear-gradient(145deg, #e8f1ff, #e4f8f4);
@@ -2906,7 +2901,6 @@
   line-height: 1.55;
 }
 
-/* El visor real necesita más ancho únicamente mientras se escanea. */
 .face-enrollment-card--scanning {
   grid-template-columns: minmax(250px, 0.72fr) minmax(0, 1.28fr);
 }
@@ -2945,7 +2939,6 @@
   }
 }
 
-/* La tarjeta de registro es más ancha; ambas conservan la misma altura. */
 .face-security-grid {
   grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
   align-items: stretch;

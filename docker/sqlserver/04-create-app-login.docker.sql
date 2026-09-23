@@ -1,9 +1,3 @@
-/*
-    Variante para Docker del script 04-create-app-login.template.sql.
-    La contraseña llega como variable sqlcmd AppPassword desde el contenedor
-    db-init; nunca se almacena en este archivo.
-*/
-
 USE [master];
 GO
 

@@ -271,7 +271,6 @@ do {
         }
     }
     catch {
-        # El servicio todavia puede estar compilando o iniciando.
     }
 
     Start-Sleep -Seconds 5

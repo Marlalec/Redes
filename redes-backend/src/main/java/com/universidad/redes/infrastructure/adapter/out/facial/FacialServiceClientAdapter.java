@@ -240,7 +240,6 @@ public class FacialServiceClientAdapter implements FacialIdentityPort {
                 return detail.asText();
             }
         } catch (Exception ignored) {
-            // La respuesta remota no contenía JSON válido.
         }
         return "respuesta HTTP " + exception.getStatusCode().value();
     }

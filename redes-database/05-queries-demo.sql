@@ -1,18 +1,9 @@
-/*
-    Proyecto: OSI Dev Explorer
-    Script: 05-queries-demo.sql
-    Objetivo: verificar el modelo y mostrar consultas útiles para la exposición.
-
-    Este script es de solo lectura.
-*/
-
 USE [RedesDB];
 GO
 
 SET NOCOUNT ON;
 GO
 
--- 1. Resumen del ambiente y cantidad de registros.
 SELECT
     @@SERVERNAME AS server_name,
     DB_NAME() AS database_name,
@@ -21,7 +12,6 @@ SELECT
     (SELECT COUNT(*) FROM dbo.NETWORK_PORT) AS network_port_count,
     (SELECT COUNT(*) FROM dbo.APP_USER) AS application_user_count;
 
--- 2. Las siete capas en el orden visual utilizado por el frontend.
 SELECT
     id,
     layer_number,
@@ -31,7 +21,6 @@ SELECT
 FROM dbo.OSI_LAYER
 ORDER BY layer_number DESC;
 
--- 3. Protocolos con su capa OSI y tipo de transporte.
 SELECT
     protocol_row.id,
     protocol_row.name AS protocol_name,
@@ -45,7 +34,6 @@ INNER JOIN dbo.OSI_LAYER AS layer_row
     ON layer_row.id = protocol_row.osi_layer_id
 ORDER BY protocol_row.name;
 
--- 4. Puertos con su protocolo, transporte y capa OSI.
 SELECT
     port_row.id,
     port_row.port_number,
@@ -63,7 +51,6 @@ INNER JOIN dbo.OSI_LAYER AS layer_row
     ON layer_row.id = protocol_row.osi_layer_id
 ORDER BY port_row.port_number;
 
--- 5. Respuesta de datos esperada para GET /api/ports/443.
 SELECT
     port_row.id,
     port_row.port_number,
@@ -83,7 +70,6 @@ INNER JOIN dbo.OSI_LAYER AS layer_row
     ON layer_row.id = protocol_row.osi_layer_id
 WHERE port_row.port_number = 443;
 
--- 6. Puertos utilizados por la arquitectura de OSI Dev Explorer.
 SELECT
     port_row.port_number,
     port_row.service,
@@ -95,7 +81,6 @@ INNER JOIN dbo.PROTOCOL AS protocol_row
 WHERE port_row.port_number IN (80, 443, 8080, 1433)
 ORDER BY port_row.port_number;
 
--- 7. Permisos directos asignados al usuario utilizado por Spring Boot.
 SELECT
     database_principal.name AS database_user,
     database_permission.state_desc,
@@ -109,7 +94,6 @@ WHERE database_principal.name = N'redes_app'
 ORDER BY database_permission.permission_name,
          object_name;
 
--- 8. Validaciones automáticas de consistencia.
 IF (SELECT COUNT(*) FROM dbo.OSI_LAYER) <> 7
     THROW 51020, N'Validación fallida: deben existir exactamente siete capas OSI.', 1;
 
